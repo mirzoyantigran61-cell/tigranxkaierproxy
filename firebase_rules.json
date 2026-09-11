@@ -1,46 +1,84 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
+
     "config": {
       ".read": false,
       ".write": false
     },
+
     "admins": {
       ".read": false,
       ".write": false
     },
+
     "keys": {
       ".read": false,
       ".write": false
     },
+
     "users": {
       ".read": false,
       ".write": false
     },
+
     "roles": {
       ".read": false,
       ".write": false
     },
+
     "products": {
       ".read": false,
       ".write": false
     },
+
     "payments": {
       ".read": false,
       ".write": false
     },
+
     "user_entitlements": {
       ".read": false,
       ".write": false
     },
+
     "ai_chats": {
       ".read": false,
       ".write": false
     },
+
     "ai_images": {
       ".read": false,
       ".write": false
     },
+
     "audit_log": {
+      ".read": false,
+      ".write": false
+    },
+
+    "server_settings": {
+      ".read": false,
+      ".write": false
+    },
+
+    "user_settings": {
+      ".read": false,
+      ".write": false
+    },
+
+    "webauthn_credentials": {
+      ".read": false,
+      ".write": false
+    },
+
+    "webauthn_user_handles": {
+      ".read": false,
+      ".write": false
+    },
+
+    "webauthn_credential_index": {
       ".read": false,
       ".write": false
     }
