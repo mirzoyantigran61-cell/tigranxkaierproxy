@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from flask import Blueprint, jsonify, request
 
+from middleware.maintenance import invalidate_maintenance_cache
 from services.auth_guard import require_admin
 from services.runtime import (
     get_firebase,
@@ -34,6 +35,9 @@ def _json() -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+# ============================================================
+# GET SERVER CONTROLS
+# ============================================================
 @server_controls_bp.get("")
 @require_admin
 def get_server_controls(
@@ -52,6 +56,7 @@ def get_server_controls(
         settings = firebase.get_server_settings() or {}
     except Exception:
         log.exception("Could not load server settings")
+
         return jsonify({
             "status": "error",
             "message": "could not load settings",
@@ -61,7 +66,10 @@ def get_server_controls(
 
     for key in ALLOWED_SETTINGS:
         result[key] = bool(
-            settings.get(key, False)
+            settings.get(
+                key,
+                False,
+            )
         )
 
     return jsonify({
@@ -70,6 +78,9 @@ def get_server_controls(
     })
 
 
+# ============================================================
+# UPDATE SERVER CONTROLS
+# ============================================================
 @server_controls_bp.patch("")
 @require_admin
 def update_server_controls(
@@ -112,20 +123,31 @@ def update_server_controls(
             "message": "database unavailable",
         }), 503
 
+    # --------------------------------------------------------
+    # SAVE SETTINGS
+    # --------------------------------------------------------
     try:
         firebase.patch(
             "server_settings",
             updates,
         )
+
+        # Immediately invalidate maintenance/feature cache.
+        invalidate_maintenance_cache()
+
     except Exception:
-        log.exception("Could not update server settings")
+        log.exception(
+            "Could not update server settings"
+        )
 
         return jsonify({
             "status": "error",
             "message": "could not update settings",
         }), 500
 
-    # Keep the tool layer/cache in sync where supported.
+    # --------------------------------------------------------
+    # TOOL CACHE
+    # --------------------------------------------------------
     tools = get_tools()
 
     if tools and hasattr(
@@ -139,9 +161,9 @@ def update_server_controls(
                 "Tool cache invalidation failed"
             )
 
-    # Maintenance middleware cache will be invalidated later
-    # when middleware/maintenance.py is added.
-
+    # --------------------------------------------------------
+    # AUDIT LOG
+    # --------------------------------------------------------
     try:
         firebase.audit(
             {
@@ -150,11 +172,15 @@ def update_server_controls(
                     item.get("uid")
                     or item.get("user_id")
                     or item.get("login")
+                    or sid
                 ),
                 "changes": updates,
             }
         )
+
     except Exception:
+        # Audit failure should not roll back
+        # an already-successful settings update.
         log.exception(
             "Could not write server-settings audit"
         )
