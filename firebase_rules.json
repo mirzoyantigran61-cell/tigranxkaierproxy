@@ -1,0 +1,48 @@
+{
+  "rules": {
+    "config": {
+      ".read": false,
+      ".write": false
+    },
+    "admins": {
+      ".read": false,
+      ".write": false
+    },
+    "keys": {
+      ".read": false,
+      ".write": false
+    },
+    "users": {
+      ".read": false,
+      ".write": false
+    },
+    "roles": {
+      ".read": false,
+      ".write": false
+    },
+    "products": {
+      ".read": false,
+      ".write": false
+    },
+    "payments": {
+      ".read": false,
+      ".write": false
+    },
+    "user_entitlements": {
+      ".read": false,
+      ".write": false
+    },
+    "ai_chats": {
+      ".read": false,
+      ".write": false
+    },
+    "ai_images": {
+      ".read": false,
+      ".write": false
+    },
+    "audit_log": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
