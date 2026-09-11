@@ -1,12 +1,20 @@
 (() => {
   const app =
-    document.getElementById(
-      "app"
-    );
+    document.getElementById("app");
 
   let currentUser = null;
   let currentRole = "user";
   let currentPage = "chat";
+
+  function escapeHtml(text) {
+    const div =
+      document.createElement("div");
+
+    div.textContent =
+      String(text || "");
+
+    return div.innerHTML;
+  }
 
   function toast(
     message,
@@ -22,24 +30,20 @@
     }
 
     const element =
-      document.createElement(
-        "div"
-      );
+      document.createElement("div");
 
     element.className =
       `toast ${type}`;
 
     element.textContent =
-      message;
+      String(message || "");
 
     container.appendChild(
       element
     );
 
     setTimeout(
-      () => {
-        element.remove();
-      },
+      () => element.remove(),
       3500
     );
   }
@@ -52,6 +56,7 @@
   ) {
     return `
       <button
+        type="button"
         class="nav-item ${
           currentPage === page
             ? "active"
@@ -72,6 +77,7 @@
       <button
         id="menu-toggle"
         class="menu-toggle"
+        type="button"
       >
         ☰
       </button>
@@ -89,51 +95,55 @@
         >
 
           <div class="logo">
-            TIGRAN AI
+            ⚡ TIGRAN AI
           </div>
 
           <div class="nav-group">
 
-            ${
-              navButton(
-                "chat",
-                "✦ Чат"
-              )
-            }
+            ${navButton(
+              "chat",
+              "✦ AI Chat"
+            )}
 
-            ${
-              navButton(
-                "images",
-                "◈ Изображения"
-              )
-            }
+            ${navButton(
+              "images",
+              "◈ Image Studio"
+            )}
 
-            ${
-              navButton(
-                "dashboard",
-                "▦ Dashboard"
-              )
-            }
+            ${navButton(
+              "dashboard",
+              "▦ Dashboard"
+            )}
 
-            ${
-              navButton(
-                "account",
-                "◉ Аккаунт"
-              )
-            }
+            ${navButton(
+              "payments",
+              "💳 Payments"
+            )}
 
-            ${
-              navButton(
-                "settings",
-                "⚙ Настройки"
-              )
-            }
+            ${navButton(
+              "account",
+              "◉ Account"
+            )}
+
+            ${navButton(
+              "settings",
+              "⚙ Settings"
+            )}
 
             ${
               isAdmin
                 ? navButton(
                     "server",
                     "⌁ Server Controls"
+                  )
+                : ""
+            }
+
+            ${
+              isAdmin
+                ? navButton(
+                    "admin",
+                    "🛡 Admin"
                   )
                 : ""
             }
@@ -145,35 +155,29 @@
             <div class="user-card">
 
               <div class="avatar">
-                ${
+                ${escapeHtml(
                   (
-                    currentUser?.email
-                    || "T"
-                  )[0]
-                    .toUpperCase()
-                }
+                    currentUser?.email ||
+                    currentUser?.display_name ||
+                    "T"
+                  )[0].toUpperCase()
+                )}
               </div>
 
               <div class="user-meta">
 
                 <div class="user-name">
-                  ${
-                    currentUser
-                      ?.display_name
-                    ||
-                    currentUser
-                      ?.email
-                    ||
+                  ${escapeHtml(
+                    currentUser?.display_name ||
+                    currentUser?.email ||
                     "User"
-                  }
+                  )}
                 </div>
 
                 <div class="user-email">
-                  ${
-                    currentUser
-                      ?.email
-                    || ""
-                  }
+                  ${escapeHtml(
+                    currentUser?.email || ""
+                  )}
                 </div>
 
               </div>
@@ -183,8 +187,10 @@
             <button
               id="logout-btn"
               class="nav-item"
+              type="button"
+              style="color:var(--danger)"
             >
-              Выйти
+              🚪 Logout
             </button>
 
           </div>
@@ -203,35 +209,25 @@
       .querySelectorAll(
         "[data-page]"
       )
-      .forEach(
-        button => {
-          button.onclick =
-            () => {
-              openPage(
-                button.dataset
-                  .page
-              );
-            };
-        }
-      );
+      .forEach(button => {
+        button.onclick =
+          () => {
+            openPage(
+              button.dataset.page
+            );
+
+            closeSidebar();
+          };
+      });
 
     document
       .getElementById(
         "logout-btn"
       )
       .onclick =
-        () =>
-          TigranAuth.logout();
-
-    const sidebar =
-      document.getElementById(
-        "sidebar"
-      );
-
-    const overlay =
-      document.getElementById(
-        "sidebar-overlay"
-      );
+        async () => {
+          await TigranAuth.logout();
+        };
 
     document
       .getElementById(
@@ -239,54 +235,62 @@
       )
       .onclick =
         () => {
-          sidebar.classList
-            .toggle(
-              "open"
-            );
+          document
+            .getElementById(
+              "sidebar"
+            )
+            .classList
+            .add("open");
 
-          overlay.classList
-            .toggle(
-              "open"
-            );
+          document
+            .getElementById(
+              "sidebar-overlay"
+            )
+            .classList
+            .add("open");
         };
 
-    overlay.onclick =
-      () => {
-        sidebar.classList
-          .remove(
-            "open"
-          );
-
-        overlay.classList
-          .remove(
-            "open"
-          );
-      };
+    document
+      .getElementById(
+        "sidebar-overlay"
+      )
+      .onclick =
+        closeSidebar;
 
     openPage(
       currentPage
     );
   }
 
-  async function openPage(
-    page
-  ) {
+  function closeSidebar() {
+    document
+      .getElementById(
+        "sidebar"
+      )
+      ?.classList
+      .remove("open");
+
+    document
+      .getElementById(
+        "sidebar-overlay"
+      )
+      ?.classList
+      .remove("open");
+  }
+
+  async function openPage(page) {
     currentPage = page;
 
     document
       .querySelectorAll(
         ".nav-item[data-page]"
       )
-      .forEach(
-        button => {
-          button.classList
-            .toggle(
-              "active",
-              button.dataset
-                .page === page
-            );
-        }
-      );
+      .forEach(button => {
+        button.classList.toggle(
+          "active",
+          button.dataset.page === page
+        );
+      });
 
     const main =
       document.getElementById(
@@ -299,62 +303,67 @@
 
     main.innerHTML = `
       <div class="initial-loader">
-        <div class="initial-loader-spinner">
-        </div>
+        <div
+          class="initial-loader-spinner"
+        ></div>
       </div>
     `;
 
     try {
-      if (
-        page === "chat"
-      ) {
-        await TigranChat
-          .render(
-            main
-          );
+      if (page === "chat") {
+        await TigranChat.render(
+          main
+        );
 
       } else if (
         page === "images"
       ) {
-        await TigranImages
-          .render(
-            main
-          );
+        await TigranImages.render(
+          main
+        );
 
       } else if (
         page === "dashboard"
       ) {
-        await TigranDashboard
-          .render(
-            main
-          );
+        await TigranDashboard.render(
+          main
+        );
+
+      } else if (
+        page === "payments"
+      ) {
+        await TigranPayments.render(
+          main
+        );
 
       } else if (
         page === "account"
       ) {
-        await TigranAccount
-          .render(
-            main
-          );
+        await TigranAccount.render(
+          main
+        );
 
       } else if (
         page === "settings"
       ) {
-        await TigranSettings
-          .render(
-            main
-          );
+        await TigranSettings.render(
+          main
+        );
 
       } else if (
-        page === "server"
-        &&
-        currentRole ===
-        "admin"
+        page === "server" &&
+        currentRole === "admin"
       ) {
         await TigranServerControls
-          .render(
-            main
-          );
+          .render(main);
+
+      } else if (
+        page === "admin" &&
+        currentRole === "admin"
+      ) {
+        await TigranAdmin.render(
+          main
+        );
 
       } else {
         main.innerHTML = `
@@ -375,26 +384,14 @@
           </div>
 
           <div class="text-danger">
-            ${escapeHtml(e.message)}
+            ${escapeHtml(
+              e.message
+            )}
           </div>
 
         </div>
       `;
     }
-  }
-
-  function escapeHtml(
-    text
-  ) {
-    const div =
-      document.createElement(
-        "div"
-      );
-
-    div.textContent =
-      String(text || "");
-
-    return div.innerHTML;
   }
 
   async function loadUser() {
@@ -405,13 +402,17 @@
         );
 
       currentUser =
-        data.user || {};
+        data.user ||
+        data.profile ||
+        {};
 
       currentRole =
-        currentUser.role
-        || "user";
+        currentUser.role ||
+        data.role ||
+        "user";
 
       return true;
+
     } catch (e) {
       console.error(
         "Could not load user:",
@@ -430,8 +431,9 @@
           TIGRAN AI
         </div>
 
-        <div class="initial-loader-spinner">
-        </div>
+        <div
+          class="initial-loader-spinner"
+        ></div>
 
         <div class="initial-loader-text">
           Запуск V4...
@@ -471,11 +473,10 @@
           if (!user) {
             currentUser = null;
             currentRole = "user";
+            currentPage = "chat";
 
             TigranAuth
-              .renderLogin(
-                app
-              );
+              .renderLogin(app);
 
             return;
           }
@@ -495,9 +496,7 @@
 
           if (!loaded) {
             TigranAuth
-              .renderLogin(
-                app
-              );
+              .renderLogin(app);
 
             return;
           }
