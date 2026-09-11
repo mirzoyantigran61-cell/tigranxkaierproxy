@@ -28,9 +28,9 @@ from services.runtime import (
     get_auth,
     get_firebase,
     get_sessions,
+    get_webauthn,
     user_storage_id,
 )
-from services.webauthn_service import WebAuthnService
 
 
 log = logging.getLogger("auth-routes")
@@ -45,26 +45,16 @@ auth_bp = Blueprint(
 # ============================================================
 # WEBAUTHN SERVICE
 # ============================================================
-_webauthn_service: Optional[WebAuthnService] = None
 
+def _webauthn():
+    service = get_webauthn()
 
-def _webauthn() -> WebAuthnService:
-    global _webauthn_service
-
-    if _webauthn_service is None:
-        firebase = get_firebase()
-
-        if firebase is None:
-            raise RuntimeError(
-                "Firebase service is not ready"
-            )
-
-        _webauthn_service = WebAuthnService(
-            firebase
+    if service is None:
+        raise RuntimeError(
+            "WebAuthn service is not ready"
         )
 
-    return _webauthn_service
-
+    return service
 
 # ============================================================
 # HELPERS
