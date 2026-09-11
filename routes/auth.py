@@ -15,7 +15,7 @@ Provides:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request
 
@@ -136,9 +136,10 @@ def _public_user(
             item.get("display_name")
             or item.get("name")
         ),
-        "photo_url": item.get(
-            "photo_url"
-        ),
+        "photo_url": (
+    item.get("photo_url")
+    or item.get("picture")
+),
         "role": item.get(
             "role",
             "user",
@@ -520,9 +521,10 @@ def sync_session():
         "display_name": item.get(
             "display_name"
         ),
-        "photo_url": item.get(
-            "photo_url"
-        ),
+        "photo_url": (
+    item.get("photo_url")
+    or item.get("picture")
+),
         "role": item.get(
             "role",
             "user",
