@@ -609,7 +609,7 @@ class FirebaseService:
             f"webauthn_credential_index/{credential_key}"
         )
 
-        def get_webauthn_user_handle(
+    def get_webauthn_user_handle(
         self,
         user_id: str,
     ) -> Optional[Any]:
