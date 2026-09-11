@@ -25,6 +25,7 @@ _session_service = None
 _payment_service = None
 _tool_registry = None
 _auth_service = None
+_webauthn_service = None
 
 
 # ============================================================
@@ -32,9 +33,9 @@ _auth_service = None
 # ============================================================
 def init_services():
     """
-    Initialize all application services.
+    Initialize all TIGRAN AI application services.
 
-    Called once from app.py before the blueprints are used.
+    Called once from app.py during startup.
     """
     global _firebase_service
     global _ai_service
@@ -42,34 +43,63 @@ def init_services():
     global _payment_service
     global _tool_registry
     global _auth_service
+    global _webauthn_service
 
     from services.firebase_service import FirebaseService
     from services.ai_service import AIService
     from services.session_service import SessionService
     from services.payment_service import PaymentService
     from services.auth_service import AuthService
+    from services.webauthn_service import WebAuthnService
     from tools.registry import ToolRegistry
 
+    # --------------------------------------------------------
+    # Firebase
+    # --------------------------------------------------------
     _firebase_service = FirebaseService()
 
+    # --------------------------------------------------------
+    # Sessions
+    # --------------------------------------------------------
     _session_service = SessionService()
 
+    # --------------------------------------------------------
+    # AI
+    # --------------------------------------------------------
     _ai_service = AIService(
         _firebase_service,
     )
 
+    # --------------------------------------------------------
+    # Payments
+    # --------------------------------------------------------
     _payment_service = PaymentService(
         _firebase_service,
     )
 
+    # --------------------------------------------------------
+    # Tools
+    # --------------------------------------------------------
     _tool_registry = ToolRegistry(
         _firebase_service,
         _session_service,
     )
 
+    # --------------------------------------------------------
+    # Authentication
+    # --------------------------------------------------------
     _auth_service = AuthService()
 
-    log.info("All TIGRAN AI services initialized")
+    # --------------------------------------------------------
+    # Passkeys / WebAuthn
+    # --------------------------------------------------------
+    _webauthn_service = WebAuthnService(
+        _firebase_service,
+    )
+
+    log.info(
+        "All TIGRAN AI V4 services initialized"
+    )
 
 
 # ============================================================
@@ -99,15 +129,25 @@ def get_auth() -> Optional["AuthService"]:
     return _auth_service
 
 
+def get_webauthn() -> Optional["WebAuthnService"]:
+    return _webauthn_service
+
+
 # ============================================================
 # STABLE USER STORAGE ID
 # ============================================================
-def user_storage_id(sid: str, item: dict | None) -> str:
+def user_storage_id(
+    sid: str,
+    item: dict | None,
+) -> str:
     """
-    Return a stable user identifier for Firebase storage.
+    Return stable user identifier for persistent storage.
 
-    Firebase Auth UID has priority. Legacy accounts fall back to a
-    stable username/login instead of a temporary session ID.
+    Priority:
+    1. Firebase UID
+    2. user_id
+    3. username/login/email
+    4. legacy session ID
     """
     item = item or {}
 
@@ -130,7 +170,9 @@ def user_storage_id(sid: str, item: dict | None) -> str:
     if login:
         return login
 
-    return str(sid or "").strip()
+    return str(
+        sid or ""
+    ).strip()
 
 
 # ============================================================
@@ -138,47 +180,76 @@ def user_storage_id(sid: str, item: dict | None) -> str:
 # ============================================================
 def apply_logging_setting() -> None:
     """
-    Apply the server-side logging level.
+    Apply runtime logging configuration.
 
-    Firebase server_settings may override the environment LOG_LEVEL.
+    Config.LOG_LEVEL controls the actual Python log level.
+
+    server_settings["logging"] is a boolean feature switch:
+    False -> suppress normal application logging
+    True  -> use Config.LOG_LEVEL
     """
-    level_name = Config.LOG_LEVEL
+    level_name = str(
+        getattr(
+            Config,
+            "LOG_LEVEL",
+            "INFO",
+        )
+        or "INFO"
+    ).strip().upper()
+
+    if level_name not in {
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    }:
+        level_name = "INFO"
+
+    logging_enabled = True
 
     firebase = get_firebase()
 
     if firebase:
         try:
-            settings = firebase.get_server_settings() or {}
+            settings = (
+                firebase.get_server_settings()
+                or {}
+            )
 
-            runtime_level = str(
-                settings.get("logging", "")
-            ).strip().upper()
+            if isinstance(settings, dict):
+                value = settings.get(
+                    "logging"
+                )
 
-            if runtime_level in {
-                "DEBUG",
-                "INFO",
-                "WARNING",
-                "ERROR",
-                "CRITICAL",
-            }:
-                level_name = runtime_level
+                if isinstance(value, bool):
+                    logging_enabled = value
 
         except Exception:
             log.exception(
                 "Could not load runtime logging setting"
             )
 
-    level = getattr(
-        logging,
-        level_name,
-        logging.INFO,
+    if logging_enabled:
+        level = getattr(
+            logging,
+            level_name,
+            logging.INFO,
+        )
+    else:
+        # Keep errors and critical problems visible.
+        level = logging.ERROR
+
+    logging.getLogger().setLevel(
+        level
     )
 
-    logging.getLogger().setLevel(level)
-
-    log.setLevel(level)
+    log.setLevel(
+        level
+    )
 
     log.info(
-        "Logging level applied: %s",
+        "Logging applied: enabled=%s level=%s",
+        logging_enabled,
         logging.getLevelName(level),
     )
