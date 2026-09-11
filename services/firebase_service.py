@@ -609,7 +609,7 @@ class FirebaseService:
             f"webauthn_credential_index/{credential_key}"
         )
 
-    def get_webauthn_user_handle(
+        def get_webauthn_user_handle(
         self,
         user_id: str,
     ) -> Optional[Any]:
@@ -639,4 +639,45 @@ class FirebaseService:
         return self.put(
             f"audit_log/{user_id}/{now_ms}",
             payload,
+        )
+
+    def audit(
+        self,
+        data: Dict[str, Any],
+    ) -> bool:
+        """
+        Compatibility audit helper used by V4 routes/tools.
+        """
+        if not isinstance(data, dict):
+            return False
+
+        action = str(
+            data.get("action")
+            or "unknown"
+        ).strip()
+
+        user_id = str(
+            data.get("user_id")
+            or data.get("uid")
+            or data.get("admin_uid")
+            or data.get("login")
+            or "system"
+        ).strip()
+
+        details = {
+            key: value
+            for key, value in data.items()
+            if key not in {
+                "action",
+                "user_id",
+                "uid",
+                "admin_uid",
+                "login",
+            }
+        }
+
+        return self.log_action(
+            user_id=user_id,
+            action=action,
+            details=details,
         )
